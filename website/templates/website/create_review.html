@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    <title>Critique</title>
+{% endblock %}
+
+{% block content %}
+    <h2>Créer le ticket</h2>
+    <form class="form" method="post" enctype="multipart/form-data">
+        {{ ticket_form.as_table }}
+        <h2 class="mt-3">Créer la critique</h2>
+        {{ review_form.as_table }}
+        {% csrf_token %}
+        <button type="submit" class="btn-primary rounded">Enregistrer</button>
+    </form>
+{% endblock %}

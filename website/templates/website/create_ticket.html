@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    <title>Ticket</title>
+{% endblock %}
+
+{% block content %}
+    <h2>Créer un ticket</h2>
+    <form class="form" method="post" enctype="multipart/form-data">
+        <div class="fields">
+            {{ ticket_form.as_table }}
+            {% csrf_token %}
+        </div>
+        <button type="submit" class="btn-primary rounded m-3">Envoyer</button>
+    </form>
+{% endblock %}
