@@ -1,21 +1,20 @@
-{% extends 'base.html'%}
+{% extends 'base.html' %}
 
 {% block title %}
-        <title>Signup</title>
+    <title>Signup</title>
 {% endblock %}
 
 {% block content %}
-        <h2>Inscription</h2>
+    <h2>Inscription</h2>  <!-- Titre de la page -->
     {% if form.errors %}
-        <div class="error">{{ form.errors }}</div>
+        <div class="error">{{ form.errors }}</div>  <!-- Affiche les erreurs du formulaire -->
     {% endif %}
     <form method="post">
-        {{ form.as_table }}
-        {% csrf_token %}
+        {{ form.as_table }}  <!-- Affiche le formulaire en utilisant une table -->
+        {% csrf_token %}  <!-- Ajoute un jeton CSRF pour la sécurité -->
         <div class="mt-5">
-            <button class="btn-primary rounded" type="submit" >S’inscrire</button>
-            <button class="btn-outline-primary rounded" onclick="window.location.href = '{% url 'login' %}'">Retour</button>
+            <button class="btn-primary rounded" type="submit">S'inscrire</button>  <!-- Bouton de soumission -->
+            <button class="btn-outline-primary rounded" onclick="window.location.href = '{% url 'login' %}'">Retour</button>  <!-- Bouton pour revenir à la page de connexion -->
         </div>
     </form>
 {% endblock %}
-
