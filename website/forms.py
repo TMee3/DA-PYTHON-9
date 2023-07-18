@@ -17,7 +17,7 @@ class TicketForm(forms.ModelForm):
 
 class ReviewForm(forms.ModelForm):
     """
-    Formulaire pour créer une critique.
+    Formulaire pour créer une critique. 
     """
     class Meta:
         model = models.Review  # Associe le formulaire au modèle Review
