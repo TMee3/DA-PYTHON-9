@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "da-python-9"
+version = "0.1.0"
+description = "DA python 9"
+authors = ["TMee3  <theopsna@protonmail.com>"]
+readme = "README.md"
+packages = [{include = "da_python_9"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

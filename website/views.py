@@ -14,49 +14,32 @@ def flux(request):
     Manage the feed, to show their own and subscribers' tickets and reviews
     """
 
-    # Obtention des utilisateurs suivis par l'utilisateur connecté
-    users_followed = UserFollows.objects.filter(user_id=request.user)
+    # Get the IDs of users followed by the logged-in user
+    users_followed_ids = UserFollows.objects.filter(user=request.user).values_list('followed_user', flat=True)
 
-    # Obtention de toutes les revues
-    reviews = Review.objects.all()
+    # Get reviews of users followed by the logged-in user
+    reviews_followed = Review.objects.filter(user__in=users_followed_ids)
 
-    # Obtention des tickets de l'utilisateur connecté
-    tickets_user = Ticket.objects.filter(user=request.user)
+    # Get tickets of the logged-in user and users followed
+    tickets_user_and_followed = Ticket.objects.filter(user__in=[request.user] + list(users_followed_ids))
 
-    # Obtention des revues provenant des utilisateurs suivis
-    reviews_from_followed = Review.objects.filter(user__in=[user_followed.followed_user for user_followed in users_followed])
+    # Get reviews from tickets of the logged-in user
+    reviews_from_tickets = Review.objects.filter(ticket__in=tickets_user_and_followed)
 
-    # Obtention des ID des tickets de l'utilisateur connecté
-    tickets_id = [ticket.id for ticket in tickets_user]
+    # Get reviews of the logged-in user (excluding reviews from tickets not followed)
+    reviews_user = Review.objects.filter(user=request.user).exclude(pk__in=reviews_from_tickets)
 
-    # Obtention des ID des tickets des revues existantes
-    reviews_ticket_id = [review.ticket.id for review in reviews]
-
-    # Obtention des revues des tickets non suivis par l'utilisateur connecté
-    reviews_from_ticket_not_followed = Review.objects.filter(ticket__in=list(set(tickets_id) & set(reviews_ticket_id)))
-
-    # Obtention des revues de l'utilisateur connecté (hors revues des tickets non suivis)
-    reviews_user = Review.objects.filter(user=request.user).exclude(pk__in=reviews_from_ticket_not_followed)
-
-    # Annotation du type de contenu pour chaque type d'objet
+    # Annotate the type of content for each type of object
     reviews_user = reviews_user.annotate(content_type=Value('REVIEW', CharField()))
-    reviews_from_followed = reviews_from_followed.annotate(content_type=Value('REVIEW', CharField()))
-    reviews_from_ticket_not_followed = reviews_from_ticket_not_followed.annotate(content_type=Value('REVIEW', CharField()))
+    reviews_followed = reviews_followed.annotate(content_type=Value('REVIEW', CharField()))
+    reviews_from_tickets = reviews_from_tickets.annotate(content_type=Value('REVIEW', CharField()))
 
-    # Obtention des tickets des utilisateurs suivis
-    tickets_from_followed = Ticket.objects.filter(user__in=[user_followed.followed_user for user_followed in users_followed])
+    # Get tickets already answered by reviews
+    tickets_already_answer = Ticket.objects.filter(review__in=reviews_followed)
 
-    # Annotation du type de contenu pour les tickets
-    tickets_user = tickets_user.annotate(content_type=Value('TICKET', CharField()))
-    tickets_from_followed = tickets_from_followed.annotate(content_type=Value('TICKET', CharField()))
-
-    # Combinaison de tous les objets et tri par date de création
-    posts = sorted(chain(reviews_user, reviews_from_followed, reviews_from_ticket_not_followed,
-                         tickets_user, tickets_from_followed),
+    # Combine all objects (reviews and tickets) and sort by date of creation
+    posts = sorted(chain(reviews_user, reviews_followed, reviews_from_tickets, tickets_user_and_followed),
                    key=lambda post: post.time_created, reverse=True)
-
-    # Obtention des tickets déjà répondues par des revues
-    tickets_already_answer = Ticket.objects.filter(pk__in=reviews_ticket_id)
 
     return render(request, 'website/flux.html', context={'posts': posts, 'tickets_already_answer': tickets_already_answer})
 
@@ -81,50 +64,56 @@ def create_ticket(request):
 @login_required
 def create_review(request):
     """
-    Permit to create a new ticket
+    Permet de créer une nouvelle review avec un ticket associé
     """
-    ticket_form = forms.TicketForm()
-    review_form = forms.ReviewForm()
     if request.method == "POST":
         ticket_form = forms.TicketForm(request.POST, request.FILES)
         review_form = forms.ReviewForm(request.POST)
-        if review_form.is_valid() and ticket_form.is_valid():
+        if ticket_form.is_valid() and review_form.is_valid():
             ticket = ticket_form.save(commit=False)
             ticket.user = request.user
             ticket.save()
+
             review = review_form.save(commit=False)
             review.user = request.user
-            review.ticket = Ticket.objects.last()
+            review.ticket = ticket
             review.save()
+
             return redirect('flux')
+    else:
+        ticket_form = forms.TicketForm()
+        review_form = forms.ReviewForm()
+
     context = {"review_form": review_form, "ticket_form": ticket_form}
     return render(request, 'website/create_review.html', context=context)
+
 
 
 @login_required
 def create_review_from_ticket(request, ticket_id):
     """
-    Permit to create a review to respond to a ticket
+    Permet de créer une review en réponse à un ticket
     """
-    ticket_id_review = [review.ticket.pk for review in Review.objects.all()]
+    ticket = None
+    review_form = forms.ReviewForm()
+
     try:
-        if ticket_id not in ticket_id_review:
-            ticket = Ticket.objects.get(pk=ticket_id)
-            review_form = forms.ReviewForm()
-            if request.method == "POST":
-                review_form = forms.ReviewForm(request.POST)
-                if review_form.is_valid():
-                    review = review_form.save(commit=False)
-                    review.user = request.user
-                    review.ticket = Ticket.objects.get(pk=ticket_id)
-                    review.save()
-                    return redirect('flux')
-        return render(request, 'website/create_review_from_ticket.html', context={"ticket": ticket, "review_form":
-                                                                                  review_form})
+        ticket = Ticket.objects.get(pk=ticket_id)
+        if request.method == "POST":
+            review_form = forms.ReviewForm(request.POST)
+            if review_form.is_valid():
+                review = review_form.save(commit=False)
+                review.user = request.user
+                review.ticket = ticket
+                review.save()
+                return redirect('flux')
     except UnboundLocalError:
         return redirect('flux')
     except Ticket.DoesNotExist:
         return redirect('flux')
+
+    return render(request, 'website/create_review_from_ticket.html', context={"ticket": ticket, "review_form": review_form})
+
 
 
 @login_required

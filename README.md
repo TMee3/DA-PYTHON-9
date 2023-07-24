@@ -18,20 +18,26 @@ Suivi des utilisateurs : Les utilisateurs peuvent suivre d'autres utilisateurs e
       Python3
    - Module utilisés:
       - Django 4
-   - Un fichier **requirements.txt** est disponible dans le dépôt.
-
+   - Poetry
+   
 ## Installation:
-Créez un dossier, par exemple "LitReview".
-Copiez et décompressez l'archive dans le dossier ou utilisez la commande "git clone".
-Ouvrez une console et placez-vous dans le dossier.
-Créez un environnement virtuel avec la commande py -m venv env.
-Activez l'environnement virtuel avec la commande :
-Windows : env\Scripts\activate
-Linux/macOS : source env/bin/activate
-Installez les packages nécessaires avec la commande : pip install -r requirements.txt.
+Clonez le dépôt du projet :
+git clone <lien-du-depot>
+cd OCR_projet_9
+
+Installez Poetry (si vous ne l'avez pas déjà installé) :
+curl -sSL https://install.python-poetry.org | python3 -
+
+Installez les dépendances du projet en utilisant Poetry :
+poetry install
 
 
 ## Utilisation:
-Exécutez le programme en tapant "py manage.py" dans la console ou via un éditeur de code.
-Dans le terminal, lancez le serveur local en utilisant la commande python manage.py runserver.
+Activez l'environnement virtuel créé par Poetry :
+poetry shell
+
+Exécutez le programme en utilisant Poetry :
+python manage.py runserver
+
 Dans votre navigateur internet, accédez au site en vous rendant à l'adresse http://127.0.0.1:8000/.
+Une fois que le serveur local est en cours d'exécution et que vous accédez au site, vous pouvez commencer à utiliser les fonctionnalités de l'application de critique de livres. Assurez-vous de vous inscrire ou de vous connecter pour accéder à l'ensemble des fonctionnalités offertes par l'application.
