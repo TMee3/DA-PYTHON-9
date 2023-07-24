@@ -209,12 +209,7 @@ def update_review(request, review_id):
     if request.method == "POST":
         update_form = forms.ReviewForm(request.POST)
         if update_form.is_valid():
-            review_updated = update_form.save(commit=False)
-            review_updated.id = review.id
-            review_updated.user = review.user
-            review_updated.time_created = review.time_created
-            review_updated.ticket = review.ticket
-            review_updated.save()
+            review_updated = update_form.save()
             return redirect('posts')
     context = {"review_form": review_form}
     return render(request, 'website/update_review.html', context=context)
@@ -251,12 +246,7 @@ def update_ticket(request, ticket_id):
     if request.method == "POST":
         update_form = forms.TicketForm(request.POST, request.FILES)
         if update_form.is_valid():
-            ticket_updated = update_form.save(commit=False)
-            ticket_updated.id = ticket.id
-            ticket_updated.user = ticket.user
-            ticket_updated.time_created = ticket.time_created
-            ticket_updated.save()
-
+            ticket_updated = update_form.save()
             return redirect('posts')
     context = {"ticket_form": ticket_form}
     return render(request, 'website/update_ticket.html', context=context)
