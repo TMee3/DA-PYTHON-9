@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import CharField, Value
 from itertools import chain
 
+
 from authentication.models import User
 from website.models import Review, UserFollows, Ticket
 from website import forms
@@ -13,35 +14,33 @@ def flux(request):
     """
     Manage the feed, to show their own and subscribers' tickets and reviews
     """
+    # Récupérer les utilisateurs suivis par l'utilisateur connecté
+    followed_users = request.user.following_users.all()
 
-    # Get the IDs of users followed by the logged-in user
-    users_followed_ids = UserFollows.objects.filter(user=request.user).values_list('followed_user', flat=True)
+    # Récupérer les IDs des utilisateurs suivis
+    followed_user_ids = followed_users.values_list('followed_user', flat=True)
 
-    # Get reviews of users followed by the logged-in user
-    reviews_followed = Review.objects.filter(user__in=users_followed_ids)
+    # Récupérer les tickets de l'utilisateur connecté et des utilisateurs suivis
+    tickets = list(Ticket.objects.filter(user_id__in=list(followed_user_ids) + [request.user.id]))
 
-    # Get tickets of the logged-in user and users followed
-    tickets_user_and_followed = Ticket.objects.filter(user__in=[request.user] + list(users_followed_ids))
+    # Récupérer les avis à partir des tickets à l'aide de '_set'
+    reviews = [review for ticket in tickets for review in ticket.review_set.all()]
 
-    # Get reviews from tickets of the logged-in user
-    reviews_from_tickets = Review.objects.filter(ticket__in=tickets_user_and_followed)
+    # Préparation des listes pour l'affichage
+    for ticket in tickets:
+        ticket.content_type = 'TICKET'
+    for review in reviews:
+        review.content_type = 'REVIEW'
 
-    # Get reviews of the logged-in user (excluding reviews from tickets not followed)
-    reviews_user = Review.objects.filter(user=request.user).exclude(pk__in=reviews_from_tickets)
+    # Combiner tous les objets (avis et tickets) et trier par date de création
+    posts = sorted(chain(reviews, tickets), key=lambda post: post.time_created, reverse=True)
 
-    # Annotate the type of content for each type of object
-    reviews_user = reviews_user.annotate(content_type=Value('REVIEW', CharField()))
-    reviews_followed = reviews_followed.annotate(content_type=Value('REVIEW', CharField()))
-    reviews_from_tickets = reviews_from_tickets.annotate(content_type=Value('REVIEW', CharField()))
+    # Récupérer les tickets déjà répondu par des avis
+    tickets_already_answered = [ticket for ticket in tickets if ticket.review_set.exists()]
 
-    # Get tickets already answered by reviews
-    tickets_already_answer = Ticket.objects.filter(review__in=reviews_followed)
+    return render(request, 'website/flux.html', context={'posts': posts, 'tickets_already_answered': tickets_already_answered})
 
-    # Combine all objects (reviews and tickets) and sort by date of creation
-    posts = sorted(chain(reviews_user, reviews_followed, reviews_from_tickets, tickets_user_and_followed),
-                   key=lambda post: post.time_created, reverse=True)
 
-    return render(request, 'website/flux.html', context={'posts': posts, 'tickets_already_answer': tickets_already_answer})
 
 
 @login_required
