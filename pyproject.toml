@@ -16,6 +16,13 @@ pillow = "^10.0.0"
 flake8 = "^6.1.0"
 flake8-html = "^0.4.3"
 
+[tool.flake8]
+exclude = "env/"
+max-line-length = 119
+format = "html"
+htmldir = "flake-report"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

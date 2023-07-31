@@ -42,7 +42,6 @@ def flux(request):
 
 
 
-
 @login_required
 def create_ticket(request):
     """
