@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.db.models import CharField, Value
+from django.db.models import CharField, Value, Q
 from itertools import chain
 
 
@@ -12,33 +12,39 @@ from website import forms
 @login_required
 def flux(request):
     """
-    Manage the feed, to show their own and subscribers' tickets and reviews
+    Gérer le flux pour afficher les tickets et les critiques de l'utilisateur connecté et de ses abonnés
     """
-    # Récupérer les utilisateurs suivis par l'utilisateur connecté
-    followed_users = request.user.following_users.all()
 
-    # Récupérer les IDs des utilisateurs suivis
-    followed_user_ids = followed_users.values_list('followed_user', flat=True)
+    # Obtenez les utilisateurs suivis par l'utilisateur connecté (leurs IDs)
+    users_followed_ids = request.user.userfollows_set.values_list('followed_user', flat=True)
 
-    # Récupérer les tickets de l'utilisateur connecté et des utilisateurs suivis
-    tickets = list(Ticket.objects.filter(user_id__in=list(followed_user_ids) + [request.user.id]))
+    # Obtenez les critiques des utilisateurs suivis par l'utilisateur connecté
+    reviews_followed = Review.objects.filter(user__in=users_followed_ids)
 
-    # Récupérer les avis à partir des tickets à l'aide de '_set'
-    reviews = [review for ticket in tickets for review in ticket.review_set.all()]
+    # Obtenez les tickets de l'utilisateur connecté et des utilisateurs suivis
+    tickets_user_and_followed = Ticket.objects.filter(user__in=[request.user] + list(users_followed_ids))
 
-    # Préparation des listes pour l'affichage
-    for ticket in tickets:
-        ticket.content_type = 'TICKET'
-    for review in reviews:
-        review.content_type = 'REVIEW'
+    # Obtenez les critiques de l'utilisateur connecté (en excluant les critiques des tickets suivis)
+    reviews_user = request.user.review_set.exclude(ticket__in=tickets_user_and_followed)
 
-    # Combiner tous les objets (avis et tickets) et trier par date de création
-    posts = sorted(chain(reviews, tickets), key=lambda post: post.time_created, reverse=True)
+    # Obtenez les tickets déjà répondus par des critiques
+    tickets_already_answer = tickets_user_and_followed.filter(review__in=reviews_followed)
 
-    # Récupérer les tickets déjà répondu par des avis
-    tickets_already_answered = [ticket for ticket in tickets if ticket.review_set.exists()]
+    # Grouper les critiques par ticket à l'aide de la notation _set
+    reviews_by_ticket = {}
+    for review in (reviews_followed | reviews_user):
+        ticket_id = review.ticket.id
+        if ticket_id not in reviews_by_ticket:
+            reviews_by_ticket[ticket_id] = []
+        reviews_by_ticket[ticket_id].append(review)
 
-    return render(request, 'website/flux.html', context={'posts': posts, 'tickets_already_answered': tickets_already_answered})
+    # Combinez tous les objets (critiques et tickets) et triez par date de création
+    posts = sorted(chain(reviews_user, reviews_followed, tickets_user_and_followed),
+                   key=lambda post: post.time_created, reverse=True)
+
+    return render(request, 'website/flux.html', context={'posts': posts, 'reviews_by_ticket': reviews_by_ticket, 'tickets_already_answer': tickets_already_answer})
+
+
 
 
 
